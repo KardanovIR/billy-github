@@ -24,13 +24,13 @@ class WinstonLogger {
                 }),
                 new transports.File({
                     filename: path.resolve(logsPath + '/silly.log'),
-                    handleExceptions: true,
+                    // handleExceptions: true,
                     level: "silly", // error and below to rotate
                 }),
                 new winston.transports.File({
                     filename: path.resolve(logsPath + '/all.log'),
                     level: 'debug',
-                    handleExceptions: true,
+                    // handleExceptions: true,
                 }),
             ],
         };
@@ -51,7 +51,8 @@ class WinstonLogger {
     }
 }
 
-const logger = WinstonLogger.create(__dirname);
+const logsPath = path.resolve(__dirname, '../../logs');
+const logger = WinstonLogger.create(logsPath);
 
 export default logger;
 export {WinstonLogger, IWinstonLogger, logger};
