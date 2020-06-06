@@ -4,3 +4,5 @@ logs/*
 ngrok/*
 .idea/*
 ngrok
+
+*.pem

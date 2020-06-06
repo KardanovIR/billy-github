@@ -1,7 +1,5 @@
 import {Model, DataTypes} from "sequelize";
 import sequelize from "../db/PostgresStore";
-import Repository from "./Repository";
-import User from "./User";
 
 class Hook extends Model {
 }

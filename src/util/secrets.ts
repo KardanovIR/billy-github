@@ -26,6 +26,8 @@ export const GITHUB_APP_ID = process.env["GITHUB_APP_ID"];
 export const GITHUB_CLIENT_ID = process.env["GITHUB_CLIENT_ID"];
 export const GITHUB_SECRET = process.env["GITHUB_SECRET"];
 export const GITHUB_WEBHOOK_SECRET = process.env["GITHUB_WEBHOOK_SECRET"];
+export const GITHUB_ACCESS_TOKEN_EXCHANGE = process.env["GITHUB_ACCESS_TOKEN_EXCHANGE"];
+export const GITHUB_API_BASE_URI = process.env["GITHUB_API_BASE_URI"];
 
 const requiredVariables = [
     "PG_HOST",

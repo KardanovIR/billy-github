@@ -7,7 +7,7 @@ import lusca from "lusca";
 // Controllers (route handlers)
 import GithubController from "./controllers/github";
 import * as apiController from "./controllers/api";
-import {requestUuid} from "./util/requestUuid";
+import {requestUuid} from "./util/requests";
 
 const port = process.env.PORT || 9716;
 

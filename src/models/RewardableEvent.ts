@@ -2,15 +2,22 @@ import {Model, DataTypes} from "sequelize";
 import sequelize from "../db/PostgresStore";
 import Repository from "./Repository";
 import User from "./User";
+import {FeedEventTypesEnum} from "../github/IFeedEvent";
 
-class Reward extends Model {
-    public id!: number;
-    public repository_id: number;
-    public user_id: number;
-    public amount: number;
+
+class RewardableEvent extends Model {
+    public id!: string;
+    public repository_id!: number;
+    public user_id!: number;
+    public type!: string;
+    public date!: string;
 }
 
-Reward.init({
+RewardableEvent.init({
+    id: {
+        type: DataTypes.STRING,
+        primaryKey: true
+    },
     repository_id: {
         type: DataTypes.INTEGER,
         references: {
@@ -25,8 +32,12 @@ Reward.init({
             key: 'id'
         }
     },
-    amount: {
-        type: DataTypes.INTEGER,
+    type: {
+        type: DataTypes.ENUM,
+        values: Object.values(FeedEventTypesEnum),
+    },
+    date: {
+        type: DataTypes.DATE,
         allowNull: false
     },
     plain_data: {
@@ -34,8 +45,8 @@ Reward.init({
     }
 }, {
     sequelize,
-    modelName: 'reward',
+    modelName: 'rewardable_event',
     paranoid: true
 });
 
-export default Reward;
+export default RewardableEvent;
