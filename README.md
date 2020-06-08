@@ -8,6 +8,9 @@ Billy for Github works almost same as Billy for Slack. More details you can find
 Количество токенов, которые получают каждый пользователь считается следующим образом:
 
 
+Данная формула применяется к каждому отдельному репозиторию, к котором пользователь дал доступ.
+
+
 ### How to get tokens?
 ### Using tokens
 
