@@ -6,3 +6,7 @@ ngrok/*
 ngrok
 
 *.pem
+
+*/genesis-generator.conf
+*/waves.custom.conf
+*.jar

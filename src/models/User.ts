@@ -3,6 +3,10 @@ import sequelize from "../db/PostgresStore";
 import {AccountTypes} from "./Account";
 import Repository from "./Repository";
 import {IActor} from "../github/IFeedEvent";
+import {address} from '@waves/ts-lib-crypto'
+import {assetBalance, broadcast, waitForTx} from "@waves/waves-transactions/dist/nodeInteraction";
+import {BLOCKCHAIN_ASSET_ID, BLOCKCHAIN_NETWORK_BYTE, BLOCKCHAIN_NODE_URL} from "../util/secrets";
+import {transfer} from "@waves/waves-transactions";
 
 export interface IUser {
     id: number,
@@ -29,7 +33,7 @@ export interface IUser {
     installation_id: number
 }
 
-class User extends Model {
+export class User extends Model {
     public id!: number;
     public login: string;
     public avatar_url: string;
@@ -37,8 +41,28 @@ class User extends Model {
     public access_token: string;
     public installation_id: string;
 
-    public getRepositories: HasManyGetAssociationsMixin<Repository>;
+    public async sendTokens(amount: number, recipient: string, attachment?: string) {
+        const transferTx = transfer({
+            recipient: recipient,
+            amount: amount,
+            assetId: BLOCKCHAIN_ASSET_ID,
+            fee: 1,
+            feeAssetId: BLOCKCHAIN_ASSET_ID,
+            attachment:  attachment
+        }, this.seed);
+        await broadcast(transferTx, BLOCKCHAIN_NODE_URL);
+        await waitForTx(transferTx.id, {apiBase: BLOCKCHAIN_NODE_URL});
+    }
 
+    public getAddress(){
+        return address(this.seed, BLOCKCHAIN_NETWORK_BYTE);
+    }
+
+    public async getBalance() {
+        return await assetBalance(BLOCKCHAIN_ASSET_ID, this.getAddress(), BLOCKCHAIN_NODE_URL);
+    }
+
+    public getRepositories: HasManyGetAssociationsMixin<Repository>;
 }
 
 User.init({
@@ -74,5 +98,6 @@ User.init({
     modelName: 'user',
     paranoid: true
 });
+
 
 export default User;

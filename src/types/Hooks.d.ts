@@ -11,11 +11,29 @@ export interface IAuthHook extends IGenericHook {
     url: string;
 }
 
-export interface ISetupHook extends IGenericHook {}
+export interface ISetupHook extends IGenericHook {
+}
 
 export interface IEventHook extends IGenericHook {
     action: GithubActionTypesEnum,
     sender?: IUser,
+    issue?: {
+        id: number,
+        url: string,
+        body: string
+        number: number
+    },
+    pull?: {
+        id: number,
+        url: string,
+        body: string
+    },
+    comment?: {
+        id: number,
+        body: string,
+        url: string,
+    },
     repositories?: Array<IRepository>
+    repository: IRepository
     installation?: IInstallation
 }

@@ -28,6 +28,15 @@ export const GITHUB_SECRET = process.env["GITHUB_SECRET"];
 export const GITHUB_WEBHOOK_SECRET = process.env["GITHUB_WEBHOOK_SECRET"];
 export const GITHUB_ACCESS_TOKEN_EXCHANGE = process.env["GITHUB_ACCESS_TOKEN_EXCHANGE"];
 export const GITHUB_API_BASE_URI = process.env["GITHUB_API_BASE_URI"];
+export const GITHUB_OCTOBILLY_TOKEN = process.env["GITHUB_OCTOBILLY_TOKEN"];
+
+export const BLOCKCHAIN_NETWORK_BYTE = process.env["BLOCKCHAIN_NETWORK_BYTE"];
+export const BLOCKCHAIN_INITIAL_SEED = process.env["BLOCKCHAIN_INITIAL_SEED"];
+export const BLOCKCHAIN_DAPP_SEED = process.env["BLOCKCHAIN_DAPP_SEED"];
+export const BLOCKCHAIN_DAPP_ADDRESS = process.env["BLOCKCHAIN_DAPP_ADDRESS"];
+export const BLOCKCHAIN_NODE_URL = process.env["BLOCKCHAIN_NODE_URL"];
+export const BLOCKCHAIN_ASSET_ID = process.env["BLOCKCHAIN_ASSET_ID"];
+
 
 const requiredVariables = [
     "PG_HOST",

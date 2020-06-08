@@ -1,6 +1,6 @@
 "use strict";
 
-import {Response, Request, NextFunction, Router} from "express";
+import {NextFunction, Response, Router} from "express";
 import logger from "../util/logger";
 import Hook, {HookTypes} from "../models/Hook";
 import {IIncomingRequest} from "IncomingRequest";
@@ -14,6 +14,8 @@ import {ErrorTypesEnum} from "../util/InternalErrorCodes";
 import User from "../models/User";
 import {RepositoriesUpdater} from "../cron/metrics";
 import {GithubAuth} from "../github/GithubAuth";
+import {RewardsDropper} from "../cron/rewards";
+import {GithubActionTypesEnum} from "../github/GithubActionTypesEnum";
 
 const GithubController = Router();
 const githubAPIConnector = new GithubAPIConnector({
@@ -81,16 +83,48 @@ const events = async (req: IIncomingRequest, res: Response, next: NextFunction) 
     Hook.create({type: HookTypes.EVENT, plain_data: eventHook})
         .catch(e => logger.error(`Can't save github event:`, e));
     const githubEvent = new GithubEventHook(eventHook);
-    const dataUpdateStatus = await githubEvent.handle();
+    if (githubEvent.containsCommand() &&
+        (eventHook.action == GithubActionTypesEnum.Created || eventHook.action == GithubActionTypesEnum.Opened)) {
+        githubEvent.parseCommand(githubAPIConnector)
+            .catch(err => logger.error(`[COMMAND] parsing error`, err));
+    } else {
+        const dataUpdateStatus = await githubEvent.handle();
+    }
     logger.verbose('Github event: ', eventHook);
 };
+
+const updateRepositories = async (req: IIncomingRequest, res: Response) => {
+    try {
+        await RepositoriesUpdater.update(githubAPIConnector);
+    } catch (e) {
+
+    }
+    res.send('asd');
+}
+
+const calculateRewards = async (req: IIncomingRequest, res: Response) => {
+    try {
+        await RewardsDropper.calculate();
+    } catch (e) {
+
+    }
+    res.send('asd');
+}
+
+const dropRewards = async (req: IIncomingRequest, res: Response) => {
+    try {
+        await RewardsDropper.drop();
+    } catch (e) {
+
+    }
+    res.send('asd');
+}
 
 GithubController.get('/auth', auth);
 GithubController.post('/setup', setup);
 GithubController.post('/events', events);
-GithubController.get('/update', (req, res) => {
-    RepositoriesUpdater.update(githubAPIConnector);
-    res.send('asd');
-});
+GithubController.get('/update', updateRepositories);
+GithubController.get('/calculate-rewards', calculateRewards);
+GithubController.get('/drop-rewards', dropRewards);
 
 export default GithubController;
