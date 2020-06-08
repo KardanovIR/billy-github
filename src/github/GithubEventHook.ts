@@ -144,7 +144,7 @@ export class GithubEventHook extends AbstractGithubHook {
         if (this.data.comment) {
             if (this.data.issue) {
                 return `/repos/${this.data.repository.full_name}/issues/comments/${this.data.comment.id}/reactions`
-            } else if (this.data.pull) {
+            } else if (this.data.pull_request) {
                 return `/repos/${this.data.repository.full_name}/pulls/comments/${this.data.comment.id}/reactions`
             } else {
                 return `/repos/${this.data.repository.full_name}/comments/${this.data.comment.id}/reactions`
@@ -189,6 +189,7 @@ export class GithubEventHook extends AbstractGithubHook {
 
                 await Bounty.create({
                     repository_id: this.data.repository.id,
+                    issue_id: this.data.issue.id,
                     issue_number: this.data.issue.number,
                     sender_id: sender.id,
                     recipient_id: null,
