@@ -23,7 +23,7 @@ export interface IEventHook extends IGenericHook {
         body: string
         number: number
     },
-    pull?: {
+    pull_request?: {
         id: number,
         url: string,
         body: string
