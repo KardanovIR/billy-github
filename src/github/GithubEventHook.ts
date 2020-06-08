@@ -214,7 +214,7 @@ export class GithubEventHook extends AbstractGithubHook {
             logger.verbose(`[COMMAND] Has comment`);
             body = this.data.comment.body;
         } else if (this.data.issue) {
-            logger.verbose(`[COMMAND] Has issue,not command`);
+            logger.verbose(`[COMMAND] Has issue, not comment`);
             body = this.data.issue.body;
         } else {
             logger.verbose(`[COMMAND] Has no command and issue`);
@@ -233,7 +233,7 @@ export class GithubEventHook extends AbstractGithubHook {
         });
 
         if (!foundTransfer && !foundBounty) {
-            logger.verbose(`[COMMAND] Transfer and bonus not found`);
+            logger.verbose(`[COMMAND] Transfer and bonus not found ${body}`);
             return await this.addConfused(githubAPIConnector);
         }
 
