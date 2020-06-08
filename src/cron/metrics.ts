@@ -20,7 +20,7 @@ interface IQueueTaskObject {
 
 const q = queue(async function (task: IQueueTaskObject, callback: Function) {
     // debugger;
-    logger.debug(`Starting queue execution for task ${task.name}`);
+    logger.debug(`Starting queue metrics execution for task ${task.name}`);
     try {
         const feed = await task.watchingRepository.getFeed(task.mLastUpdateDate, [
             FeedEventTypesEnum.PullRequestEvent,

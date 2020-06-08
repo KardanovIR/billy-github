@@ -29,9 +29,9 @@ export class WatchingRepository {
             }
         });
         if (lastActionDate) {
-            return moment(lastActionDate.date).add(-30, "days");
+            return moment(lastActionDate.date).add(-1, "days");
         } else {
-            return moment().add(-30, 'days');
+            return moment().add(-60, 'days');
         }
     }
 

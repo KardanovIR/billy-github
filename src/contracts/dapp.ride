@@ -1,0 +1,115 @@
+{-# STDLIB_VERSION 3 #-}
+{-# CONTENT_TYPE DAPP #-}
+{-# SCRIPT_TYPE ACCOUNT #-}
+
+let assetId = base58'J4QEV82GsU3WbQxEUcUN5S63knWLafqR6RSm48XaaP6'
+
+func keyUserRepoDate(date: String, userId: Int, repositoryId: Int) = {
+    "user=" + userId.toString() + ";repo=" + repositoryId.toString() + ";date=" + date
+}
+
+func keyDropped(date: String, userId: Int, repositoryId: Int) = {
+     keyUserRepoDate(date, userId, repositoryId) + "/dropped"
+}
+func keyActivityDays(date: String, userId: Int, repositoryId: Int) = {
+    keyUserRepoDate(date, userId, repositoryId) + "/activity"
+}
+func keyStars(date: String, userId: Int, repositoryId: Int) = {
+    keyUserRepoDate(date, userId, repositoryId) + "/stars"
+}
+func keyForks(date: String, userId: Int, repositoryId: Int) = {
+    keyUserRepoDate(date, userId, repositoryId) + "/forks"
+}
+func keyTokensToDrop(date: String, userId: Int, repositoryId: Int) = {
+    keyUserRepoDate(date, userId, repositoryId) + "/tokensToDrop"
+}
+func keyBonus(repositoryId: Int, issueId: Int, id: String) = {
+    "repo=" + repositoryId.toString() + ";issue=" + issueId.toString() + ";id=" + id
+}
+func keyBonusClosed(repositoryId: Int, issueId: Int, id: String) = {
+    keyBonus(repositoryId, issueId, id) + "/closed"
+}
+
+
+
+func droppedAlready(date: String, userId: Int, repositoryId: Int) = {
+    let key = keyDropped(date, userId, repositoryId)
+    match (getBoolean(this, key)) {
+        case b: Boolean => b
+        case _ => false
+    }
+}
+
+@Callable(i)
+func airdrop(date: String, userId: Int, repositoryId: Int, recipient: String, activityDays: Int, stars: Int, forks: Int, tokensToDrop: Int) = {
+    if (i.caller != this) then {
+        throw("This method can be called only with admin public key")
+    }else
+    if (droppedAlready(date, userId, repositoryId))then{
+        throw("Tokens for user " + userId.toString() + " and repository " + repositoryId.toString() + " on " + date + " were dropped already")
+    }else{
+        ScriptResult(
+            WriteSet([
+                DataEntry(keyDropped(date, userId, repositoryId), true),
+                DataEntry(keyActivityDays(date, userId, repositoryId), activityDays),
+                DataEntry(keyStars(date, userId, repositoryId), stars),
+                DataEntry(keyForks(date, userId, repositoryId), forks),
+                DataEntry(keyTokensToDrop(date, userId, repositoryId), tokensToDrop)
+            ]),
+            TransferSet([
+                ScriptTransfer(addressFromStringValue(recipient), tokensToDrop, assetId)
+            ])
+        )
+    }
+}
+
+@Callable(i)
+func transfer(recipient: String, amount: Int, entityType: String, link: String) = {
+    let pmt = extract(i.payment)  # creating variable with all data about a payment attached to the invokation
+    if (!isDefined(pmt.assetId)) then throw("You have to attach Octobilly tokens")
+    else if (pmt.assetId != assetId) then throw("You have to attach Octobilly tokens")  # waves-only threshold
+    else {
+        let transferAmount = pmt.amount + if (i.feeAssetId == assetId) then i.fee else 0
+
+        TransferSet([
+            ScriptTransfer(addressFromStringValue(recipient), transferAmount, assetId)
+        ])
+    }
+}
+
+
+@Callable(i)
+func bonus(repositoryId: Int, issueId: Int, id: String) = {
+    let pmt = extract(i.payment)  # creating variable with all data about a payment attached to the invokation
+    if (!isDefined(pmt.assetId)) then throw("You have to attach Octobilly tokens")
+    else if (pmt.assetId != assetId) then throw("You have to attach Octobilly tokens")  # waves-only threshold
+    else if (getInteger(this, keyBonus(repositoryId, issueId, id)).isDefined()) then throw("Same bonus already exists")
+    else {
+        let transferAmount = pmt.amount + if (i.feeAssetId == assetId) then i.fee else 0
+        WriteSet([
+            DataEntry(keyBonus(repositoryId, issueId, id), transferAmount),
+            DataEntry(keyBonusClosed(repositoryId, issueId, id), false)
+        ])
+    }
+}
+
+@Callable(i)
+func closeBonus(repositoryId: Int, issueId: Int, id: String, recipient: String) = {
+    if (i.caller != this) then {
+        throw("This method can be called only with admin public key")
+    } else if (getBooleanValue(this, keyBonusClosed(repositoryId, issueId, id)) == true) then throw("Bonus is closed already")
+    else {
+        let bonusAmount = getIntegerValue(this, keyBonus(repositoryId, issueId, id))
+        ScriptResult(
+            WriteSet([
+                DataEntry(keyBonusClosed(repositoryId, issueId, id), true)
+            ]),
+            TransferSet([
+                ScriptTransfer(addressFromStringValue(recipient), bonusAmount, assetId)
+            ])
+        )
+    }
+}
+
+# @Verifier(tx)
+# func standardVerifier() = sigVerify(tx.bodyBytes, tx.proofs[0], tx.senderPublicKey)

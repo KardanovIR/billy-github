@@ -20,6 +20,13 @@ export interface IUserAccessToken {
     token_type: string
 }
 
+export enum ReactionTypesEnum {
+    Heart = 'heart',
+    Eyes = 'eyes',
+    Confused = 'confused',
+    Rocket = 'rocket'
+}
+
 
 export class GithubAPIConnector {
 
@@ -59,6 +66,19 @@ export class GithubAPIConnector {
     private async callPrivateApi<T>(endpoint: string, token: string, requestOptions?: AxiosRequestConfig): Promise<T> {
         const headers = requestOptions && requestOptions.headers ? requestOptions.headers : {};
         const result = await this.axiosInstance.get<T>(endpoint, {
+            ...requestOptions,
+            headers: {
+                'Authorization': `token ${token}`,
+                ...headers
+            }
+        });
+        return result.data;
+    }
+
+    private async sendPrivateApi<T>(endpoint: string, token: string, requestOptions?: AxiosRequestConfig): Promise<T> {
+        const headers = requestOptions && requestOptions.headers ? requestOptions.headers : {};
+        const data = requestOptions && requestOptions.data ? requestOptions.data : {};
+        const result = await this.axiosInstance.post<T>(endpoint, data, {
             ...requestOptions,
             headers: {
                 'Authorization': `token ${token}`,
@@ -108,6 +128,23 @@ export class GithubAPIConnector {
 
     async getRepoStats(repository: Repository, token?: string) {
         return await this.callPublicApi<IGithubRepoDetails>(`/repos/${repository.full_name}`, token);
-
     }
+
+    async getUserPublicInfo(login: string, token?: string): Promise<IUser> {
+        return await this.callPublicApi<IUser>(`/users${login}`, token);
+    }
+
+    addReaction(endpoint: string, reaction: ReactionTypesEnum, token: string) {
+        return this.sendPrivateApi(endpoint, token, {
+            headers: {
+                'Accept': 'application/vnd.github.squirrel-girl-preview+json',
+                'Content-Type': 'application/json',
+            },
+            data: {
+                "content": reaction
+            }
+        })
+    }
+
+
 }

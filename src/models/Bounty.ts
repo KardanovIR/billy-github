@@ -14,6 +14,14 @@ Bounty.init({
             key: 'id'
         }
     },
+    issue_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    issue_number: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     sender_id: {
         type: DataTypes.INTEGER,
         references: {
@@ -26,7 +34,9 @@ Bounty.init({
         references: {
             model: User,
             key: 'id'
-        }
+        },
+        allowNull: true,
+        defaultValue: null
     },
     url: {
         type: DataTypes.STRING,
@@ -36,10 +46,14 @@ Bounty.init({
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    executed: {
-        type: DataTypes.BOOLEAN,
+    transaction_id: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    execution_tx_id: {
+        type: DataTypes.STRING,
         allowNull: true,
-        defaultValue: false
+        defaultValue: null
     },
     plain_data: {
         type: DataTypes.JSONB

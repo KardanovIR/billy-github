@@ -1,4 +1,5 @@
 export enum GithubActionTypesEnum {
     Created = 'created',
-    Closed = 'closed'
+    Closed = 'closed',
+    Opened = 'opened'
 }
