@@ -21,6 +21,7 @@ export interface IEventHook extends IGenericHook {
         id: number,
         url: string,
         body: string
+        events_url: string
         number: number
     },
     pull_request?: {

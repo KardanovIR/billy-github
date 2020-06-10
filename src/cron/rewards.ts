@@ -61,24 +61,35 @@ export class RewardsDropper {
         return Math.floor((1 + (1 / 30 * activityDays)) * Math.sqrt(stars + forks))
     }
 
-    static async calculate() {
+    static async calculate(userId?: number) {
+        let addedByUserFilter:any = {};
+        if (userId){
+            addedByUserFilter.id = userId;
+        }
+
         const users = await User.findAll({
             where: {
                 access_token: {
                     [Op.ne]: null
-                }
+                },
+                ...addedByUserFilter
             }
         });
+        logger.verbose(`Found users to reward: ${users.length}`);
         try {
             for (const user of users) {
+                logger.verbose(`Getting stats for ${user.login}`);
                 const userStats = await sequelize.query(GET_USER_REPO_ACTIVITIES, {
                     replacements: {user_id: user.id},
                     type: QueryTypes.SELECT
                 }) as Array<{ user_id: number, repository_id: number, t: string, activities: number | null, stars: number, forks: number }>;
+                logger.verbose(`Found stats for ${user.login}: ${userStats.length}`);
                 for (const activity of userStats) {
+                    logger.verbose(`Activities amount for ${activity.repository_id}: ${activity.activities}`);
                     if (activity.activities === null || activity.activities === 0) continue;
                     const amount = RewardsDropper.calculateTokensCount(activity.stars, activity.forks, activity.activities);
-                    Reward.create({
+                    logger.verbose(`Reward amount for ${activity.repository_id}: ${amount}`);
+                    await Reward.create({
                         user_id: user.id,
                         repository_id: activity.repository_id,
                         date: activity.t,
@@ -96,7 +107,12 @@ export class RewardsDropper {
         }
     }
 
-    static async drop() {
+    static async drop(userId?: number) {
+        let addedByUserFilter:any = {};
+        if (userId){
+            addedByUserFilter.user_id = userId;
+        }
+
         const rewards = await Reward.findAll<Reward>({
             where: {
                 transaction_id: {
@@ -104,7 +120,8 @@ export class RewardsDropper {
                 },
                 amount: {
                     [Op.gt]: 0
-                }
+                },
+                ...addedByUserFilter
             },
             include: [User]
         });
@@ -142,8 +159,11 @@ export class RewardsDropper {
     }
 
     static async startCronJob() {
-        cron.schedule('15 * * * *', async () => {
+        cron.schedule('45 * * * *', async () => {
             await RewardsDropper.calculate();
+        });
+        cron.schedule('0 * * * *', async () => {
+            await RewardsDropper.drop();
         });
     }
 }

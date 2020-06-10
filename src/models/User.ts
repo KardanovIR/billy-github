@@ -40,6 +40,7 @@ export class User extends Model {
     public seed: string;
     public access_token: string;
     public installation_id: string;
+    public plain_data: IUser;
 
     public async sendTokens(amount: number, recipient: string, attachment?: string) {
         const transferTx = transfer({

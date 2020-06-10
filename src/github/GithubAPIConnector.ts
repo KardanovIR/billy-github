@@ -1,7 +1,7 @@
 import axios, {AxiosError, AxiosRequestConfig, AxiosResponse, AxiosInstance} from "axios";
 import {IUser} from "../models/User";
 import Repository, {IGithubRepoDetails, IRepository} from "../models/Repository";
-import {IGenericFeedEvent} from "./IFeedEvent";
+import {IGenericFeedEvent, IIssueEvent} from "./IFeedEvent";
 import logger from "../util/logger";
 
 export interface IGithubSecrets {
@@ -88,7 +88,7 @@ export class GithubAPIConnector {
         return result.data;
     }
 
-    private async callPublicApi<T>(endpoint: string, token?: string, requestOptions?: AxiosRequestConfig): Promise<T> {
+    public async callPublicApi<T>(endpoint: string, token?: string, requestOptions?: AxiosRequestConfig): Promise<T> {
         let headers = requestOptions && requestOptions.headers ? requestOptions.headers : {};
         if (token) {
             headers = {
@@ -124,6 +124,19 @@ export class GithubAPIConnector {
                 per_page: 100
             }
         })
+    }
+
+    async getIssueFeed(repository: Repository | IRepository, issueNumber: number, page: number = 1, token?: string): Promise<Array<IIssueEvent>> {
+        return this.callPublicApi<Array<IIssueEvent>>(`/repos/${repository.full_name}/issues/${issueNumber}/events`, token, {
+            params: {
+                page: page,
+                per_page: 100
+            }
+        })
+    }
+
+    async getCommitInfo(repository: Repository | IRepository, commitId: string, token?: string): Promise<{ author: IUser }> {
+        return this.callPublicApi<{ author: IUser }>(`/repos/${repository.full_name}/commits/${commitId}`, token);
     }
 
     async getRepoStats(repository: Repository, token?: string) {

@@ -1,4 +1,7 @@
 .env
+.env.production
+dist/*
+ui/*
 node_modules/*
 logs/*
 ngrok/*
@@ -7,6 +10,7 @@ ngrok
 
 *.pem
 
+dist/blockchain-functions.js
 */genesis-generator.conf
 */waves.custom.conf
 *.jar

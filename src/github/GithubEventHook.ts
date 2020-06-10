@@ -13,7 +13,7 @@ import {GithubAPIConnector, ReactionTypesEnum} from "./GithubAPIConnector";
 import {GithubAuth} from "./GithubAuth";
 import {
     BLOCKCHAIN_ASSET_ID,
-    BLOCKCHAIN_DAPP_ADDRESS, BLOCKCHAIN_NETWORK_BYTE,
+    BLOCKCHAIN_DAPP_ADDRESS, BLOCKCHAIN_DAPP_SEED, BLOCKCHAIN_NETWORK_BYTE,
     BLOCKCHAIN_NODE_URL,
     GITHUB_OCTOBILLY_TOKEN
 } from "../util/secrets";
@@ -21,13 +21,14 @@ import logger from "../util/logger";
 import {stringToBytes, base58Encode} from '@waves/ts-lib-crypto'
 import Bounty from "../models/Bounty";
 import {broadcast, invokeScript, waitForTx} from "@waves/waves-transactions";
+import {getInstallationAuthentication} from "@octokit/auth-app/dist-types/get-installation-authentication";
 
 
 export class GithubEventHook extends AbstractGithubHook {
 
     private readonly data: IEventHook;
     private transferCommandRegex = /@octobilly (?<amount>\d+)\s*?.*?\s*?(?<recipient>@[\w\d_]+)/gim;
-    private bountyCommandRegex = /@octobilly (?<amount>\d+) .*?/gim;
+    private bountyCommandRegex = /@octobilly (?<amount>\d+)\s*?.*?/gim;
 
 
     constructor(event: IEventHook) {
@@ -237,7 +238,7 @@ export class GithubEventHook extends AbstractGithubHook {
             return await this.addConfused(githubAPIConnector);
         }
 
-        if (!senderUser.seed) {
+        if (!senderUser || !senderUser.seed) {
             logger.verbose(`[COMMAND] Found, but user has no seed`);
             return await this.addConfused(githubAPIConnector);
         }
@@ -260,6 +261,65 @@ export class GithubEventHook extends AbstractGithubHook {
             logger.error(`[COMMAND] Error during execution: `, e);
             await this.addConfused(githubAPIConnector);
             return;
+        }
+    }
+
+    async finalizeBounties(githubAPIConnector: GithubAPIConnector) {
+        const bounties = await Bounty.findAll({
+            where: {
+                issue_id: this.data.issue.id,
+                execution_tx_id: null
+            },
+            include: ['user']
+        });
+        logger.verbose(`[BOUNTY] Issue ${this.data.issue.id} is closed, associated bounties found: ${bounties.length}`);
+        if (bounties.length === 0) return;
+        const installationToken = await GithubAuth.getInstallationToken(this.data.installation.id.toString());
+        const issueEvents = await githubAPIConnector.getIssueFeed(this.data.repository, this.data.issue.number, installationToken.token);
+        logger.verbose(`[BOUNTY] Fetched events for closed issue ${this.data.issue.id}: ${issueEvents.length}`);
+        for (const event of issueEvents) {
+            if (event.event === GithubActionTypesEnum.Closed && event.commit_url) {
+                logger.verbose(`[BOUNTY] Found issue closing event for ${this.data.issue.id}`, event);
+
+                const commitInfo = await githubAPIConnector.getCommitInfo(this.data.repository, event.commit_id, installationToken.token);
+                const authorUser = commitInfo.author;
+                logger.verbose(`[BOUNTY] Found closing author for issue ${this.data.issue.id}`, authorUser);
+                let userInDb = await User.findByPk(authorUser.id);
+                if (!userInDb) {
+                    logger.verbose(`[BOUNTY] Issue closed by new user ${authorUser.login}`);
+                    userInDb = await User.create(authorUser);
+                }else {
+                    logger.verbose(`[BOUNTY] Issue closed by is known ${authorUser.login}`);
+                }
+                const recipientAddress = userInDb.getAddress();
+                for (const bounty of bounties) {
+                    const commentId = bounty.plain_data.comment ? bounty.plain_data.comment.id : null;
+                    const invokeTx = invokeScript({
+                        dApp: BLOCKCHAIN_DAPP_ADDRESS,
+                        call: {
+                            function: 'closeBonus',
+                            args: [
+                                {type: 'integer', value: this.data.repository.id},
+                                {type: 'integer', value: this.data.issue.id},
+                                {type: 'string', value: `;user=${bounty.user.id};com=${commentId}`},
+                                {type: 'string', value: recipientAddress}
+                            ]
+                        },
+                        fee: 900000,
+                        chainId: BLOCKCHAIN_NETWORK_BYTE
+                    }, BLOCKCHAIN_DAPP_SEED);
+                    logger.verbose(`[BOUNTY] Created a transaction to payout bounty: ${bounty.transaction_id}`);
+                    await broadcast(invokeTx, BLOCKCHAIN_NODE_URL);
+                    logger.verbose(`[BOUNTY] Broadcasted bounty payout, waiting: ${bounty.transaction_id}`);
+                    await waitForTx(invokeTx.id, {apiBase: BLOCKCHAIN_NODE_URL});
+                    logger.verbose(`[BOUNTY] Bounty payout is in the blockchain: ${bounty.transaction_id}`);
+                    bounty.update({
+                        recipient_id: userInDb.id,
+                        execution_tx_id: invokeTx.id
+                    });
+                    logger.verbose(`[BOUNTY] Bounty execution tx id was updated: ${bounty.transaction_id}`);
+                }
+            }
         }
     }
 }

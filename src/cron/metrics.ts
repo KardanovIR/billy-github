@@ -72,7 +72,7 @@ const q = queue(async function (task: IQueueTaskObject, callback: Function) {
         logger.error(`Error during task execution ${task.name}:`, e);
     }
     callback();
-}, 3);
+}, 5);
 
 q.drain(function () {
     logger.verbose('All items in repository update queue has been drained');
@@ -85,31 +85,43 @@ q.error(function (err, task) {
 
 export class RepositoriesUpdater {
 
-    static async update(githubApiConnector: GithubAPIConnector) {
+    static async update(githubApiConnector: GithubAPIConnector, userId?: number) {
+        let addedByUserFilter:any = {};
+        if (userId){
+            addedByUserFilter.added_by_user_id = userId;
+        }
         const repositories = await Repository.findAll({
             where: {
-                private: false
+                private: false,
+                ...addedByUserFilter
             }
         });
         const usersMap = new Map();
-        try {
-            for (const repo of repositories) {
-                let user = usersMap.get(repo.added_by_user_id);
-                if (!user) {
-                    user = await repo.getUser();
-                    usersMap.set(repo.added_by_user_id, user);
-                }
-                const watchingRepository = new WatchingRepository(repo, user, githubApiConnector);
-                const lastUpdateDate = await watchingRepository.getLastUpdateDate();
-                const mLastUpdateDate = moment(lastUpdateDate).add(-1, "days");
-                const name = `Repo-${repo.id}:User-${user.id}:Token-${user.access_token}`;
-                q.push({mLastUpdateDate, watchingRepository, name}, function (err) {
-                    console.error('Task callback error', err);
+        return new Promise(async (resolve) =>  {
+            try {
+                q.drain(function () {
+                    logger.verbose('All items in repository update queue has been drained');
+                    resolve();
                 });
+                for (const repo of repositories) {
+                    let user = usersMap.get(repo.added_by_user_id);
+                    if (!user) {
+                        user = await repo.getUser();
+                        usersMap.set(repo.added_by_user_id, user);
+                    }
+                    const watchingRepository = new WatchingRepository(repo, user, githubApiConnector);
+                    const lastUpdateDate = await watchingRepository.getLastUpdateDate();
+                    const mLastUpdateDate = moment(lastUpdateDate).add(-1, "days");
+                    const name = `Repo-${repo.id}:User-${user.id}:Token-${user.access_token}`;
+                    q.push({mLastUpdateDate, watchingRepository, name}, function (err) {
+                        console.error('Task callback error', err);
+                    });
+                }
+            } catch (e) {
+                logger.error(`Error while updating repositories`, e);
+                resolve();
             }
-        } catch (e) {
-            logger.error(`Error while updating repositories`, e);
-        }
+        })
     }
 
     static async startCronJob(githubApiConnector: GithubAPIConnector) {

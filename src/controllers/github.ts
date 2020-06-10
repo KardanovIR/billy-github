@@ -7,7 +7,15 @@ import {IIncomingRequest} from "IncomingRequest";
 import {IAuthHook, IEventHook, ISetupHook} from "Hooks";
 import {GithubEventHook} from "../github/GithubEventHook";
 import {GithubAPIConnector} from "../github/GithubAPIConnector";
-import {GITHUB_ACCESS_TOKEN_EXCHANGE, GITHUB_API_BASE_URI, GITHUB_CLIENT_ID, GITHUB_SECRET} from "../util/secrets";
+import {
+    ENVIRONMENT,
+    GITHUB_ACCESS_TOKEN_EXCHANGE,
+    GITHUB_API_BASE_URI,
+    GITHUB_CLIENT_ID,
+    GITHUB_SECRET,
+    PASSPORT_SECRET
+} from "../util/secrets";
+
 import {sendError} from "../util/requests";
 import {HTTPStatusCodesEnum} from "../http/HTTPStatusCodesEnum";
 import {ErrorTypesEnum} from "../util/InternalErrorCodes";
@@ -18,7 +26,9 @@ import {RewardsDropper} from "../cron/rewards";
 import {GithubActionTypesEnum} from "../github/GithubActionTypesEnum";
 
 const GithubController = Router();
-const githubAPIConnector = new GithubAPIConnector({
+const jwt = require('jsonwebtoken');
+
+export const githubAPIConnector = new GithubAPIConnector({
     clientId: GITHUB_CLIENT_ID,
     clientSecret: GITHUB_SECRET,
     apiBaseURI: GITHUB_API_BASE_URI,
@@ -54,7 +64,29 @@ const auth = async (req: IIncomingRequest, res: Response) => {
         const oauthToken = await GithubAuth.getOauthToken(installationId, authCode);
         const userDetails = await githubAPIConnector.getUser(oauthToken.token);
         await User.update({access_token: oauthToken.token}, {where: {id: userDetails.id}});
-        res.redirect('/')
+        const userInDb = await User.findByPk(userDetails.id);
+        const payload = {
+            user: {
+                name: userDetails.login,
+                id: userDetails.id
+            },
+            address: userInDb.getAddress(),
+            accessToken: userDetails.access_token,
+            expires: Date.now() + (10 * 365 * 24 * 60 * 60)
+        };
+
+        logger.verbose(`Setting auth token:`, payload);
+
+        /** generate a signed json web token and return it in the response */
+        const token = jwt.sign(payload, PASSPORT_SECRET);
+        await RepositoriesUpdater.update(githubAPIConnector, userInDb.id);
+
+        await RewardsDropper.calculate(userInDb.id);
+        await RewardsDropper.drop(userInDb.id);
+        res.cookie('jwt', token, {
+            httpOnly: ENVIRONMENT === 'production',
+            secure: ENVIRONMENT === 'production'
+        }).redirect('/')
     } catch (e) {
         logger.error(`Access token exchange error: `, e);
         return sendError(res, req, {
@@ -84,13 +116,17 @@ const events = async (req: IIncomingRequest, res: Response, next: NextFunction) 
         .catch(e => logger.error(`Can't save github event:`, e));
     const githubEvent = new GithubEventHook(eventHook);
     if (githubEvent.containsCommand() &&
-        (eventHook.action == GithubActionTypesEnum.Created || eventHook.action == GithubActionTypesEnum.Opened)) {
+        (eventHook.action === GithubActionTypesEnum.Created || eventHook.action === GithubActionTypesEnum.Opened)) {
         githubEvent.parseCommand(githubAPIConnector)
+            .catch(err => logger.error(`[COMMAND] parsing error`, err));
+    } else if (eventHook.issue && eventHook.action === GithubActionTypesEnum.Closed) {
+        githubEvent.finalizeBounties(githubAPIConnector)
             .catch(err => logger.error(`[COMMAND] parsing error`, err));
     } else {
         const dataUpdateStatus = await githubEvent.handle();
     }
     logger.verbose('Github event: ', eventHook);
+    res.sendStatus(200);
 };
 
 const updateRepositories = async (req: IIncomingRequest, res: Response) => {
