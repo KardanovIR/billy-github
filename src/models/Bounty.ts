@@ -1,9 +1,21 @@
-import {Model, DataTypes} from "sequelize";
+import {Model, DataTypes, BelongsToGetAssociationMixin} from "sequelize";
 import sequelize from "../db/PostgresStore";
 import Repository from "./Repository";
 import User from "./User";
 
 class Bounty extends Model {
+    public repository_id: number;
+    public issue_id: number;
+    public issue_number: number;
+    public sender_id: number;
+    public recipient_id: number;
+    public url: string;
+    public amount: number;
+    public transaction_id: string;
+    public execution_tx_id: string;
+    public plain_data: any;
+
+    public user?: User;
 }
 
 Bounty.init({
@@ -13,6 +25,14 @@ Bounty.init({
             model: Repository,
             key: 'id'
         }
+    },
+    issue_id: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
+    issue_number: {
+        type: DataTypes.INTEGER,
+        allowNull: false
     },
     sender_id: {
         type: DataTypes.INTEGER,
@@ -26,7 +46,9 @@ Bounty.init({
         references: {
             model: User,
             key: 'id'
-        }
+        },
+        allowNull: true,
+        defaultValue: null
     },
     url: {
         type: DataTypes.STRING,
@@ -36,10 +58,14 @@ Bounty.init({
         type: DataTypes.INTEGER,
         allowNull: false
     },
-    executed: {
-        type: DataTypes.BOOLEAN,
+    transaction_id: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    execution_tx_id: {
+        type: DataTypes.STRING,
         allowNull: true,
-        defaultValue: false
+        defaultValue: null
     },
     plain_data: {
         type: DataTypes.JSONB
@@ -49,5 +75,7 @@ Bounty.init({
     modelName: 'bounty',
     paranoid: true
 });
+
+Bounty.belongsTo(User, {foreignKey: 'sender_id'});
 
 export default Bounty;

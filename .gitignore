@@ -1,6 +1,16 @@
 .env
+.env.production
+dist/*
+ui/*
 node_modules/*
 logs/*
 ngrok/*
 .idea/*
 ngrok
+
+*.pem
+
+dist/blockchain-functions.js
+*/genesis-generator.conf
+*/waves.custom.conf
+*.jar

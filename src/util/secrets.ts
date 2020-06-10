@@ -10,9 +10,10 @@ if (fs.existsSync(".env")) {
     dotenv.config({path: ".env.example"});  // you can delete this after you create your own .env file!
 }
 export const ENVIRONMENT = process.env.NODE_ENV;
-const prod = ENVIRONMENT === "production"; // Anything else is treated as 'dev'
+export const prod = ENVIRONMENT === "production"; // Anything else is treated as 'dev'
 
 export const SESSION_SECRET = process.env["SESSION_SECRET"];
+export const PASSPORT_SECRET = process.env["PASSPORT_SECRET"];
 
 // Postgres variables
 export const PG_HOST = process.env["PG_HOST"];
@@ -26,6 +27,17 @@ export const GITHUB_APP_ID = process.env["GITHUB_APP_ID"];
 export const GITHUB_CLIENT_ID = process.env["GITHUB_CLIENT_ID"];
 export const GITHUB_SECRET = process.env["GITHUB_SECRET"];
 export const GITHUB_WEBHOOK_SECRET = process.env["GITHUB_WEBHOOK_SECRET"];
+export const GITHUB_ACCESS_TOKEN_EXCHANGE = process.env["GITHUB_ACCESS_TOKEN_EXCHANGE"];
+export const GITHUB_API_BASE_URI = process.env["GITHUB_API_BASE_URI"];
+export const GITHUB_OCTOBILLY_TOKEN = process.env["GITHUB_OCTOBILLY_TOKEN"];
+
+export const BLOCKCHAIN_NETWORK_BYTE = process.env["BLOCKCHAIN_NETWORK_BYTE"];
+export const BLOCKCHAIN_INITIAL_SEED = process.env["BLOCKCHAIN_INITIAL_SEED"];
+export const BLOCKCHAIN_DAPP_SEED = process.env["BLOCKCHAIN_DAPP_SEED"];
+export const BLOCKCHAIN_DAPP_ADDRESS = process.env["BLOCKCHAIN_DAPP_ADDRESS"];
+export const BLOCKCHAIN_NODE_URL = process.env["BLOCKCHAIN_NODE_URL"];
+export const BLOCKCHAIN_ASSET_ID = process.env["BLOCKCHAIN_ASSET_ID"];
+
 
 const requiredVariables = [
     "PG_HOST",

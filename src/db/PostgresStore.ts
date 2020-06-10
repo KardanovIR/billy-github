@@ -1,9 +1,6 @@
 import {PG_DATABASE, PG_HOST, PG_PASSWORD, PG_PORT, PG_USERNAME} from "../util/secrets";
 import {logger} from "../util/logger";
 import {ConnectionError, Sequelize} from "sequelize";
-import fs from 'fs';
-import path from 'path';
-
 
 const sequelize = new Sequelize(PG_DATABASE, PG_USERNAME, PG_PASSWORD, {
     host: PG_HOST,
@@ -15,11 +12,11 @@ const sequelize = new Sequelize(PG_DATABASE, PG_USERNAME, PG_PASSWORD, {
         idle: 10000
     },
     dialect: 'postgres'
-})
+});
 
 sequelize
     .authenticate()
-    .then(() => {
+    .then(async () => {
         logger.verbose(`Connection with the database ${PG_DATABASE} on ${PG_HOST}:${PG_PORT} as ${PG_USERNAME} has been established successfully.`);
     })
     .catch((err: ConnectionError) => {
